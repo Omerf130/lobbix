@@ -1,6 +1,7 @@
 import Constants from 'expo-constants';
+import { Link, type Href } from 'expo-router';
 import { useMemo } from 'react';
-import { Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -60,6 +61,18 @@ export default function WelcomeScreen() {
             {strings.description}
           </ThemedText>
 
+          {__DEV__ ? (
+            <Link href={'/dev/3d-test' as Href} asChild>
+              <Pressable
+                accessibilityRole="button"
+                style={({ pressed }) => [styles.devLink, pressed && styles.devLinkPressed]}>
+                <ThemedText type="caption" themeColor="accentTurquoise">
+                  {strings.dev3dButton}
+                </ThemedText>
+              </Pressable>
+            </Link>
+          ) : null}
+
           <View style={styles.footer}>
             <ThemedText type="caption" themeColor="textSecondary">
               {strings.sdkLabel} {expoSdk}
@@ -107,6 +120,20 @@ const styles = StyleSheet.create({
   description: {
     alignSelf: 'stretch',
     textAlign: 'right',
+  },
+  devLink: {
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    marginTop: Spacing.sm,
+    borderWidth: 1,
+    borderColor: palette.border,
+    backgroundColor: palette.navy800,
+    paddingVertical: Spacing.sm + 2,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Radius.md,
+  },
+  devLinkPressed: {
+    opacity: 0.88,
   },
   footer: {
     marginTop: Spacing.lg,
