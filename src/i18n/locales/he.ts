@@ -5,6 +5,7 @@ export const he = {
   baselineBadge: 'Baseline · Checkpoint 1',
   sdkLabel: 'Expo SDK',
   dev3dButton: 'בדיקת תלת־ממד (פיתוח)',
+  devMovementButton: 'בדיקת תנועה (פיתוח)',
 } as const;
 
 export type TranslationKeys = typeof he;

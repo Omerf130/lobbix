@@ -62,15 +62,26 @@ export default function WelcomeScreen() {
           </ThemedText>
 
           {__DEV__ ? (
-            <Link href={'/dev/3d-test' as Href} asChild>
-              <Pressable
-                accessibilityRole="button"
-                style={({ pressed }) => [styles.devLink, pressed && styles.devLinkPressed]}>
-                <ThemedText type="caption" themeColor="accentTurquoise">
-                  {strings.dev3dButton}
-                </ThemedText>
-              </Pressable>
-            </Link>
+            <>
+              <Link href={'/dev/3d-test' as Href} asChild>
+                <Pressable
+                  accessibilityRole="button"
+                  style={({ pressed }) => [styles.devLink, pressed && styles.devLinkPressed]}>
+                  <ThemedText type="caption" themeColor="accentTurquoise">
+                    {strings.dev3dButton}
+                  </ThemedText>
+                </Pressable>
+              </Link>
+              <Link href={'/dev/movement-test' as Href} asChild>
+                <Pressable
+                  accessibilityRole="button"
+                  style={({ pressed }) => [styles.devLink, pressed && styles.devLinkPressed]}>
+                  <ThemedText type="caption" themeColor="accentTurquoise">
+                    {strings.devMovementButton}
+                  </ThemedText>
+                </Pressable>
+              </Link>
+            </>
           ) : null}
 
           <View style={styles.footer}>

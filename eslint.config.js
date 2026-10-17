@@ -7,4 +7,15 @@ module.exports = defineConfig([
   {
     ignores: ['dist/*'],
   },
+  {
+    files: [
+      'src/components/dev/virtual-joystick.tsx',
+      'src/components/dev/camera-drag-zone.tsx',
+    ],
+    rules: {
+      // RNGH Pan + mutable MovementControlState; Gesture built in useMemo with runOnJS handlers.
+      'react-hooks/immutability': 'off',
+      'react-hooks/refs': 'off',
+    },
+  },
 ]);
