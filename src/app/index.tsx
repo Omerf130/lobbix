@@ -1,96 +1,97 @@
-import Constants from 'expo-constants';
-import { Link, type Href } from 'expo-router';
-import { useMemo } from 'react';
-import { Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Image } from 'expo-image';
+import { Link, router, type Href } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { LobbixButton } from '@/components/ui/lobbix-button';
+import { LobbixLogo } from '@/components/ui/lobbix-logo';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { MaxContentWidth, palette, Radius, Spacing } from '@/constants/theme';
+import { WelcomeImages } from '@/constants/welcome-images';
+import { palette, Spacing } from '@/constants/theme';
 import { getStrings } from '@/i18n';
+import { DevMenuGear } from '@/components/dev/dev-menu-gear';
+import { getResumeOnboardingHref } from '@/lib/onboarding/resume-route';
 
 export default function WelcomeScreen() {
   const strings = getStrings();
   const { width, height } = useWindowDimensions();
+  const [bootReady, setBootReady] = useState(false);
 
   const layout = useMemo(() => {
     const isCompact = height < 700 || width < 360;
-    const horizontalPadding = Math.max(Spacing.md, Math.min(width * 0.08, Spacing.xl));
+    const horizontalPadding = Math.max(Spacing.md, Math.min(width * 0.06, Spacing.lg));
+    const logoWidth = Math.min(width * 0.58, 280);
+    const charactersHeight = Math.min(Math.max(height * (isCompact ? 0.4 : 0.48), 230), 480);
 
     return {
-      isCompact,
       horizontalPadding,
-      heroSize: isCompact ? 32 : width > 400 ? 44 : 40,
-      contentMaxWidth: Math.min(width - horizontalPadding * 2, MaxContentWidth),
+      logoWidth,
+      charactersHeight,
     };
   }, [width, height]);
 
-  const expoSdk = Constants.expoConfig?.sdkVersion ?? '58';
+  useEffect(() => {
+    let active = true;
+    getResumeOnboardingHref().then((href) => {
+      if (!active) return;
+      if (href) router.replace(href);
+      setBootReady(true);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (!bootReady) {
+    return <ThemedView style={styles.root} />;
+  }
 
   return (
     <ThemedView style={styles.root}>
-      <View
-        pointerEvents="none"
-        style={[styles.glowPurple, { top: layout.isCompact ? -80 : -40 }]}
+      <Image
+        source={WelcomeImages.background}
+        style={StyleSheet.absoluteFill}
+        contentFit="cover"
+        accessibilityIgnoresInvertColors
       />
-      <View
-        pointerEvents="none"
-        style={[styles.glowTurquoise, { bottom: layout.isCompact ? -100 : -60 }]}
-      />
+      <View pointerEvents="none" style={styles.screenScrim} />
 
-      <SafeAreaView style={[styles.safeArea, { paddingHorizontal: layout.horizontalPadding }]}>
-        <View style={[styles.content, { maxWidth: layout.contentMaxWidth }]}>
-          <View style={styles.badge}>
-            <ThemedText type="badge" themeColor="accentTurquoise">
-              {strings.baselineBadge}
+      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+        <ScrollView
+          bounces={false}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingHorizontal: layout.horizontalPadding, minHeight: height - Spacing.lg },
+          ]}
+          showsVerticalScrollIndicator={false}>
+          <View style={styles.topBrand}>
+            <LobbixLogo width={layout.logoWidth} />
+            <ThemedText type="subtitle" themeColor="accentPurple" style={styles.tagline}>
+              {strings.tagline}
             </ThemedText>
           </View>
 
-          <ThemedText
-            type="hero"
-            style={[styles.brand, { fontSize: layout.heroSize, lineHeight: layout.heroSize + 8 }]}
-            accessibilityRole="header">
-            LOBBIX
-          </ThemedText>
-
-          <ThemedText type="subtitle" themeColor="accentPurple" style={styles.tagline}>
-            {strings.tagline}
-          </ThemedText>
-
-          <ThemedText type="body" themeColor="textSecondary" style={styles.description}>
-            {strings.description}
-          </ThemedText>
-
-          {__DEV__ ? (
-            <>
-              <Link href={'/dev/3d-test' as Href} asChild>
-                <Pressable
-                  accessibilityRole="button"
-                  style={({ pressed }) => [styles.devLink, pressed && styles.devLinkPressed]}>
-                  <ThemedText type="caption" themeColor="accentTurquoise">
-                    {strings.dev3dButton}
-                  </ThemedText>
-                </Pressable>
-              </Link>
-              <Link href={'/dev/movement-test' as Href} asChild>
-                <Pressable
-                  accessibilityRole="button"
-                  style={({ pressed }) => [styles.devLink, pressed && styles.devLinkPressed]}>
-                  <ThemedText type="caption" themeColor="accentTurquoise">
-                    {strings.devMovementButton}
-                  </ThemedText>
-                </Pressable>
-              </Link>
-            </>
-          ) : null}
-
-          <View style={styles.footer}>
-            <ThemedText type="caption" themeColor="textSecondary">
-              {strings.sdkLabel} {expoSdk}
-              {Platform.OS !== 'web' ? ` · ${Platform.OS}` : ''}
-            </ThemedText>
+          <View style={[styles.charactersStage, { minHeight: layout.charactersHeight }]}>
+            <Image
+              source={WelcomeImages.characters}
+              style={[styles.characters, { height: layout.charactersHeight }]}
+              contentFit="contain"
+              accessibilityIgnoresInvertColors
+            />
           </View>
-        </View>
+
+          <View style={styles.bottomActions}>
+            <Link href={'/register' as Href} asChild>
+              <LobbixButton label={strings.welcomePrimaryCta} variant="primary" fullWidth />
+            </Link>
+            <Link href={'/login' as Href} asChild>
+              <LobbixButton label={strings.welcomeSecondaryCta} variant="secondary" fullWidth />
+            </Link>
+          </View>
+        </ScrollView>
+        <DevMenuGear />
       </SafeAreaView>
     </ThemedView>
   );
@@ -99,74 +100,46 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+    backgroundColor: palette.navy900,
   },
   safeArea: {
     flex: 1,
-    justifyContent: 'center',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'space-between',
+    gap: 0,
+    paddingTop: Spacing.xs,
+  },
+  screenScrim: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(11, 16, 32, 0.28)',
+  },
+  topBrand: {
     alignItems: 'center',
-  },
-  content: {
-    width: '100%',
-    alignItems: 'flex-end',
-    gap: Spacing.md,
-  },
-  badge: {
-    alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderColor: palette.border,
-    backgroundColor: palette.navy800,
-    paddingHorizontal: Spacing.sm + 2,
-    paddingVertical: Spacing.xs,
-    borderRadius: Radius.pill,
-  },
-  brand: {
-    alignSelf: 'stretch',
-    textAlign: 'right',
-    letterSpacing: 2,
+    gap: Spacing.xs,
+    marginBottom: -Spacing.sm,
   },
   tagline: {
-    alignSelf: 'stretch',
-    textAlign: 'right',
-  },
-  description: {
-    alignSelf: 'stretch',
-    textAlign: 'right',
-  },
-  devLink: {
-    alignSelf: 'stretch',
-    alignItems: 'center',
-    marginTop: Spacing.sm,
-    borderWidth: 1,
-    borderColor: palette.border,
-    backgroundColor: palette.navy800,
-    paddingVertical: Spacing.sm + 2,
+    textAlign: 'center',
     paddingHorizontal: Spacing.md,
-    borderRadius: Radius.md,
   },
-  devLinkPressed: {
-    opacity: 0.88,
+  charactersStage: {
+    flexGrow: 1,
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    width: '100%',
+    marginTop: -Spacing.xs,
+    marginBottom: -Spacing.md,
   },
-  footer: {
-    marginTop: Spacing.lg,
-    alignSelf: 'stretch',
-    alignItems: 'flex-end',
+  characters: {
+    width: '100%',
+    maxWidth: 560,
   },
-  glowPurple: {
-    position: 'absolute',
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    end: -80,
-    backgroundColor: palette.purple,
-    opacity: 0.12,
-  },
-  glowTurquoise: {
-    position: 'absolute',
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    start: -60,
-    backgroundColor: palette.turquoise,
-    opacity: 0.08,
+  bottomActions: {
+    width: '100%',
+    gap: Spacing.sm,
+    paddingTop: Spacing.xs,
+    paddingBottom: Spacing.xs,
   },
 });
