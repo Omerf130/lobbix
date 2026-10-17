@@ -36,6 +36,15 @@ export default function DevMenuScreen() {
           <Link href={'/dev/glb-test' as Href} asChild>
             <LobbixButton label={strings.devGlbTestButton} variant="secondary" fullWidth />
           </Link>
+          <Link href={'/dev/chibi-test' as Href} asChild>
+            <LobbixButton label={strings.devChibiTestButton} variant="secondary" fullWidth />
+          </Link>
+          <Link href={'/dev/chibi-animated-test' as Href} asChild>
+            <LobbixButton label={strings.devChibiAnimatedTestButton} variant="secondary" fullWidth />
+          </Link>
+          <Link href={'/dev/chibi-movement-test' as Href} asChild>
+            <LobbixButton label={strings.devChibiMovementButton} variant="secondary" fullWidth />
+          </Link>
           <Link href={'/onboarding/avatar' as Href} asChild>
             <LobbixButton label={strings.devAvatarCustomizeButton} variant="secondary" fullWidth />
           </Link>

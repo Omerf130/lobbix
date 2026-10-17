@@ -11,8 +11,12 @@ module.exports = defineConfig([
     files: [
       'src/components/dev/virtual-joystick.tsx',
       'src/components/dev/camera-drag-zone.tsx',
+      'src/components/dev/movement-touch-controls.tsx',
+      'src/lib/dev/movement-touch-gestures.ts',
       'src/app/onboarding/avatar.tsx',
       'src/app/dev/glb-test.tsx',
+      'src/app/dev/chibi-test.tsx',
+      'src/app/dev/chibi-animated-test.tsx',
     ],
     rules: {
       // RNGH Pan + mutable MovementControlState; Gesture built in useMemo with runOnJS handlers.
@@ -28,7 +32,12 @@ module.exports = defineConfig([
     },
   },
   {
-    files: ['src/components/dev/glb-test-scene.tsx'],
+    files: [
+      'src/components/dev/glb-test-scene.tsx',
+      'src/components/dev/chibi-test-scene.tsx',
+      'src/components/dev/chibi-animated-test-scene.tsx',
+      'src/components/dev/chibi-movement-test-scene.tsx',
+    ],
     rules: {
       // R3F useFrame: AnimationMixer + counter root-motion on loaded GLTF scene.
       'react-hooks/immutability': 'off',

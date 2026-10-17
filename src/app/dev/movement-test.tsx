@@ -5,10 +5,9 @@ import { Suspense, useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { CameraDragZone } from '@/components/dev/camera-drag-zone';
 import { MovementTestScene } from '@/components/dev/movement-test-scene';
+import { MovementTouchControls } from '@/components/dev/movement-touch-controls';
 import { SceneErrorBoundary } from '@/components/dev/scene-error-boundary';
-import { VirtualJoystick } from '@/components/dev/virtual-joystick';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { palette, Radius, Spacing } from '@/constants/theme';
@@ -68,8 +67,7 @@ export default function MovementTestScreen() {
 
       {!fatalError ? (
         <>
-          <CameraDragZone controls={controls} />
-          <VirtualJoystick controls={controls} />
+          <MovementTouchControls controls={controls} />
         </>
       ) : null}
 
