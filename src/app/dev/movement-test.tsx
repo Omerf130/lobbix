@@ -79,7 +79,7 @@ export default function MovementTestScreen() {
             LOBBIX — בדיקת תנועה
           </ThemedText>
           <ThemedText type="caption" themeColor="textSecondary" style={styles.instructions}>
-            גויסטיק שמאל: תנועה · גרירה ימין: סיבוב מצלמה
+            גויסטיק ימין: תנועה · גרירה שמאל/מרכז: סיבוב מצלמה
           </ThemedText>
         </View>
         <Pressable

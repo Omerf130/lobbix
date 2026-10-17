@@ -3,11 +3,13 @@
 /* eslint-disable react/no-unknown-property -- R3F uses Three.js JSX props */
 import '@/lib/r3f-native-bootstrap';
 import { Canvas, useFrame } from '@react-three/fiber/native';
-import { useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Group, MathUtils, Vector3 } from 'three';
 
+import { ChibiAvatar, CHIBI_LOOK_AT_HEIGHT, type ChibiAnimState } from '@/components/avatar/chibi-avatar';
 import { palette } from '@/constants/theme';
+import { headingYFromMovementDirection, lerpHeadingY } from '@/lib/avatar-heading';
 import type { MovementControlState } from '@/lib/movement-control-state';
 
 const ARENA_HALF = 11;
@@ -51,43 +53,9 @@ function Environment() {
   );
 }
 
-function PlaceholderCharacter({ bodyRef }: { bodyRef: React.RefObject<Group | null> }) {
-  return (
-    <group ref={bodyRef} position={[0, 0, 0]}>
-      <mesh position={[0, 1.05, -0.42]}>
-        <boxGeometry args={[0.12, 0.12, 0.12]} />
-        <meshStandardMaterial color={palette.turquoise} emissive={palette.turquoise} emissiveIntensity={0.35} />
-      </mesh>
-      <mesh position={[0, 1.55, 0]}>
-        <sphereGeometry args={[0.22, 12, 12]} />
-        <meshStandardMaterial color={palette.white} roughness={0.5} />
-      </mesh>
-      <mesh position={[0, 1.05, 0]}>
-        <boxGeometry args={[0.42, 0.55, 0.28]} />
-        <meshStandardMaterial color={palette.purple} roughness={0.55} />
-      </mesh>
-      <mesh position={[-0.32, 1.05, 0]}>
-        <boxGeometry args={[0.18, 0.45, 0.18]} />
-        <meshStandardMaterial color={palette.purple} roughness={0.55} />
-      </mesh>
-      <mesh position={[0.32, 1.05, 0]}>
-        <boxGeometry args={[0.18, 0.45, 0.18]} />
-        <meshStandardMaterial color={palette.purple} roughness={0.55} />
-      </mesh>
-      <mesh position={[-0.14, 0.45, 0]}>
-        <boxGeometry args={[0.2, 0.55, 0.22]} />
-        <meshStandardMaterial color={palette.navy700} roughness={0.6} />
-      </mesh>
-      <mesh position={[0.14, 0.45, 0]}>
-        <boxGeometry args={[0.2, 0.55, 0.22]} />
-        <meshStandardMaterial color={palette.navy700} roughness={0.6} />
-      </mesh>
-    </group>
-  );
-}
-
 function MovementRig({ controls }: { controls: MovementControlState }) {
   const bodyRef = useRef<Group>(null);
+  const animState = useMemo<ChibiAnimState>(() => ({ moving: false, phase: 0 }), []);
   const position = useRef(new Vector3(0, 0, 0));
   const facing = useRef(0);
   const moveDir = useRef(new Vector3());
@@ -105,6 +73,10 @@ function MovementRig({ controls }: { controls: MovementControlState }) {
     const mx = input.moveX;
     const my = input.moveY;
     const moving = mx !== 0 || my !== 0;
+    animState.moving = moving;
+    if (moving) {
+      animState.phase += delta * 9;
+    }
 
     if (moving) {
       state.camera.getWorldDirection(camLook.current);
@@ -134,8 +106,15 @@ function MovementRig({ controls }: { controls: MovementControlState }) {
         moveDir.current.normalize();
         position.current.x += moveDir.current.x * MOVE_SPEED * delta;
         position.current.z += moveDir.current.z * MOVE_SPEED * delta;
-        const targetFacing = Math.atan2(moveDir.current.x, moveDir.current.z);
-        facing.current = MathUtils.lerp(facing.current, targetFacing, 1 - Math.exp(-10 * delta));
+        const targetFacing = headingYFromMovementDirection(
+          moveDir.current.x,
+          moveDir.current.z,
+        );
+        facing.current = lerpHeadingY(
+          facing.current,
+          targetFacing,
+          1 - Math.exp(-10 * delta),
+        );
       }
     }
 
@@ -177,14 +156,14 @@ function MovementRig({ controls }: { controls: MovementControlState }) {
       position.current.y + Math.sin(pitch) * dist + 1.2,
       position.current.z - Math.cos(yaw) * Math.cos(pitch) * dist,
     );
-    lookTarget.current.set(position.current.x, 1.2, position.current.z);
+    lookTarget.current.set(position.current.x, CHIBI_LOOK_AT_HEIGHT, position.current.z);
 
     const lerpFactor = 1 - Math.exp(-6 * delta);
     state.camera.position.lerp(desiredCam.current, lerpFactor);
     state.camera.lookAt(lookTarget.current);
   });
 
-  return <PlaceholderCharacter bodyRef={bodyRef} />;
+  return <ChibiAvatar rootRef={bodyRef} anim={animState} />;
 }
 
 export function MovementTestScene({ controls, onReady }: MovementTestSceneProps) {

@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { palette, Spacing } from '@/constants/theme';
 import type { MovementControlState } from '@/lib/movement-control-state';
+import { physicalBottomRightJoystickStyle } from '@/lib/touch-control-layout';
 
 const BASE_SIZE = 128;
 const THUMB_SIZE = 52;
@@ -20,6 +21,9 @@ type VirtualJoystickProps = {
 export function VirtualJoystick({ controls }: VirtualJoystickProps) {
   const insets = useSafeAreaInsets();
   const thumbViewRef = useRef<View>(null);
+
+  const margin = Spacing.md;
+  const bottom = Spacing.md + insets.bottom;
 
   const applyTranslation = useCallback((translationX: number, translationY: number) => {
     const dist = Math.hypot(translationX, translationY);
@@ -72,21 +76,24 @@ export function VirtualJoystick({ controls }: VirtualJoystickProps) {
   );
 
   return (
-    <View
-      style={[styles.host, { left: Spacing.md, bottom: Spacing.md + insets.bottom }]}
-      pointerEvents="box-none">
-      <GestureDetector gesture={panGesture}>
-        <View style={styles.base}>
-          <View ref={thumbViewRef} style={styles.thumb} />
-        </View>
-      </GestureDetector>
+    <View style={styles.lane} pointerEvents="box-none">
+      <View
+        style={physicalBottomRightJoystickStyle(margin, bottom, BASE_SIZE)}
+        pointerEvents="box-none">
+        <GestureDetector gesture={panGesture}>
+          <View style={styles.base}>
+            <View ref={thumbViewRef} style={styles.thumb} />
+          </View>
+        </GestureDetector>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  host: {
-    position: 'absolute',
+  lane: {
+    ...StyleSheet.absoluteFill,
+    direction: 'ltr',
     zIndex: 20,
     elevation: 20,
   },

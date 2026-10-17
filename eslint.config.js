@@ -18,4 +18,11 @@ module.exports = defineConfig([
       'react-hooks/refs': 'off',
     },
   },
+  {
+    files: ['src/components/dev/movement-test-scene.tsx'],
+    rules: {
+      // R3F useFrame: movement + shared ChibiAnimState (no per-frame React state).
+      'react-hooks/immutability': 'off',
+    },
+  },
 ]);

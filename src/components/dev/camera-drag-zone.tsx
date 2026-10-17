@@ -12,6 +12,7 @@ import {
   CAMERA_YAW_RADIANS_PER_SCREEN_WIDTH,
 } from '@/lib/camera-touch-sensitivity';
 import type { MovementControlState } from '@/lib/movement-control-state';
+import { PHYSICAL_LTR_OVERLAY, physicalCameraZoneWidth } from '@/lib/touch-control-layout';
 
 type CameraDragZoneProps = {
   controls: MovementControlState;
@@ -71,7 +72,13 @@ export function CameraDragZone({ controls }: CameraDragZoneProps) {
 
   return (
     <GestureDetector gesture={panGesture}>
-      <View style={[styles.zone, { left: width * 0.42, width: width * 0.58 }]} />
+      <View
+        style={[
+          styles.zone,
+          PHYSICAL_LTR_OVERLAY,
+          { left: 0, width: physicalCameraZoneWidth(width) },
+        ]}
+      />
     </GestureDetector>
   );
 }
