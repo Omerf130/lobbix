@@ -11,6 +11,8 @@ export type FitFloorGlbOptions = {
   targetSizeZ: number;
   /** Optional cap so vertical size stays believable (uniform scale). */
   targetMaxHeight?: number;
+  /** Floor-align flat GLBs (e.g. lounge) so seat height reads on mobile. */
+  targetMinHeight?: number;
 };
 
 /** Clone a GLB root, uniform-scale to a footprint, pivot bottom-center to y=0. */
@@ -21,6 +23,9 @@ export function cloneAndFitFloorGlb(root: Object3D, opts: FitFloorGlbOptions): O
   _box.getSize(_size);
 
   let scale = Math.min(opts.targetSizeX / _size.x, opts.targetSizeZ / _size.z);
+  if (opts.targetMinHeight !== undefined && _size.y > 1e-6) {
+    scale = Math.max(scale, opts.targetMinHeight / _size.y);
+  }
   if (opts.targetMaxHeight !== undefined && _size.y > 1e-6) {
     scale = Math.min(scale, opts.targetMaxHeight / _size.y);
   }

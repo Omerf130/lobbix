@@ -5,18 +5,18 @@ import { palette } from '@/constants/theme';
 /** Reused materials — fewer GPU program switches on mobile. */
 export const lobbyMat = {
   floorA: new MeshStandardMaterial({
-    color: '#222e48',
-    roughness: 0.42,
-    metalness: 0.22,
-    emissive: '#141c30',
-    emissiveIntensity: 0.09,
+    color: '#1a2540',
+    roughness: 0.34,
+    metalness: 0.3,
+    emissive: '#121828',
+    emissiveIntensity: 0.1,
   }),
   floorB: new MeshStandardMaterial({
-    color: '#1a2438',
-    roughness: 0.38,
-    metalness: 0.26,
-    emissive: '#101828',
-    emissiveIntensity: 0.1,
+    color: '#141e34',
+    roughness: 0.3,
+    metalness: 0.32,
+    emissive: '#0e1424',
+    emissiveIntensity: 0.11,
   }),
   floorHubLine: new MeshBasicMaterial({
     color: palette.turquoise,

@@ -27,6 +27,7 @@ export function LobbyGamingLounge({ x, z, rotationY = 0 }: LobbyGamingLoungeProp
     return cloneAndFitFloorGlb(gltf.scene, {
       targetSizeX: quarterTurn ? worldSz : worldSx,
       targetSizeZ: quarterTurn ? worldSx : worldSz,
+      targetMinHeight: LOBBY_GAMING_LOUNGE_FOOTPRINT.minHeight,
     });
   }, [gltf.scene, rotationY]);
 

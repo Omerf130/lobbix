@@ -1,98 +1,120 @@
 import type { LobbyArenaConfig, LobbyObstacle } from '@/lib/lobby/lobby-arena';
 
-/** Walkable corridor half-width (keep |x| below this for clear path). */
-export const LOBBY_CORRIDOR_HALF_WIDTH = 2.35;
+/** Clear central walkway half-width (|x| below this between lounge and station). */
+export const LOBBY_CORRIDOR_HALF_WIDTH = 1.85;
 
 export type GameEntranceTheme = {
   readonly id: 'valorant' | 'cs2' | 'fortnite';
   readonly label: string;
-  readonly side: 'left' | 'right';
+  readonly x: number;
   readonly z: number;
   readonly accent: string;
   readonly accentDim: string;
   readonly glow: string;
 };
 
-/** Clustered alcoves visible from default spawn (visual only). */
+/** Three portals on the forward (−Z) wall — 4B.3E vision layout. */
+export const LOBBY_PORTAL_ROW_Z = -3.42;
+
 export const LOBBY_GAME_ENTRANCES: readonly GameEntranceTheme[] = [
   {
     id: 'valorant',
     label: 'VALORANT',
-    side: 'left',
-    z: 2.4,
-    accent: '#FF6B5A',
-    accentDim: '#8B3D34',
-    glow: '#FF8A7A',
+    x: -3.12,
+    z: LOBBY_PORTAL_ROW_Z,
+    accent: '#FF5A78',
+    accentDim: '#8B2E48',
+    glow: '#FF8AA8',
   },
   {
     id: 'cs2',
     label: 'CS2',
-    side: 'right',
-    z: 0.9,
-    accent: '#00C2FF',
-    accentDim: '#0E6E8C',
-    glow: '#5CE1FF',
+    x: 0,
+    z: LOBBY_PORTAL_ROW_Z,
+    accent: '#FFB347',
+    accentDim: '#8B5A18',
+    glow: '#FFD080',
   },
   {
     id: 'fortnite',
     label: 'FORTNITE',
-    side: 'left',
-    z: -0.9,
-    accent: '#B47CFF',
-    accentDim: '#6B3FA8',
-    glow: '#E089F5',
+    x: 3.12,
+    z: LOBBY_PORTAL_ROW_Z,
+    accent: '#00D4FF',
+    accentDim: '#0E6E8C',
+    glow: '#5CE1FF',
   },
 ] as const;
 
-const hx = 5.85;
-/** Shortened club depth (4B.3B) — was 11.8. */
-const hz = 7.5;
+const hx = 6.15;
+/** Compact wide club — not a deep corridor (4B.3E). */
+const hz = 4.65;
 
-/** Meshy gaming station — chibi-scale desk (~4B.3D). */
-export const LOBBY_GAMING_STATION_FOOTPRINT = { sx: 1.55, sz: 1.05 } as const;
+export const LOBBY_MESHY_PORTAL_FIT = { sx: 1.68, sz: 0.52, maxHeight: 2.22 } as const;
 
-/** Single sofa + table asset (right lounge nook). */
-export const LOBBY_GAMING_LOUNGE_PLACEMENT = { x: 3.2, z: -3.05, rotationY: -Math.PI / 2 } as const;
-export const LOBBY_GAMING_LOUNGE_FOOTPRINT = { sx: 1.9, sz: 1.08 } as const;
+/** Walkable half-width inside each portal frame (world X). */
+export const LOBBY_PORTAL_PASSAGE_HALF_WIDTH = 0.52;
 
-/** One Meshy portal (VALORANT alcove) — opening width × depth × max height. */
-export const LOBBY_MESHY_PORTAL_FIT = { sx: 1.72, sz: 0.48, maxHeight: 2.18 } as const;
+export function lobbyPortalSideFrameObstacles(
+  portalX: number,
+  portalZ: number,
+): readonly LobbyObstacle[] {
+  const lip = LOBBY_PORTAL_PASSAGE_HALF_WIDTH + 0.22;
+  return [
+    { x: portalX - lip, z: portalZ, sx: 0.34, sz: 0.48 },
+    { x: portalX + lip, z: portalZ, sx: 0.34, sz: 0.48 },
+  ];
+}
 
-/** Side frames only — center passage stays walkable (4B.3D). */
-export const LOBBY_VALORANT_PORTAL_FRAME_OBSTACLES: readonly LobbyObstacle[] = [
-  { x: -5.55, z: 1.55, sx: 0.38, sz: 0.55 },
-  { x: -5.55, z: 3.25, sx: 0.38, sz: 0.55 },
-];
+export const LOBBY_GAMING_STATION_FOOTPRINT = { sx: 1.52, sz: 1.02 } as const;
+export const LOBBY_GAMING_STATION_PLACEMENT = {
+  x: 4.28,
+  z: 0.35,
+  rotationY: Math.PI / 2,
+} as const;
 
-/** Props / furniture — synced with rendered meshes and collision. */
+/** Lounge GLB is very flat in Y (~0.17 m native) — minHeight fixes “tiny table” read. */
+export const LOBBY_GAMING_LOUNGE_FOOTPRINT = { sx: 2.35, sz: 1.32, minHeight: 0.5 } as const;
+export const LOBBY_GAMING_LOUNGE_PLACEMENT = {
+  x: -4.28,
+  z: 0.35,
+  rotationY: Math.PI / 2,
+} as const;
+
+const portalFrames = LOBBY_GAME_ENTRANCES.flatMap((e) =>
+  lobbyPortalSideFrameObstacles(e.x, e.z),
+);
+
 export const LOBBY_CLUB_OBSTACLES: readonly LobbyObstacle[] = [
-  { x: -3.45, z: 4.0, sx: 1.1, sz: 0.72 },
-  { x: 3.45, z: 3.5, sx: LOBBY_GAMING_STATION_FOOTPRINT.sx, sz: LOBBY_GAMING_STATION_FOOTPRINT.sz },
-  { x: -3.55, z: 1.2, sx: 1.15, sz: 0.62 },
-  { x: 3.55, z: 0.2, sx: 1.15, sz: 0.62 },
   {
     x: LOBBY_GAMING_LOUNGE_PLACEMENT.x,
     z: LOBBY_GAMING_LOUNGE_PLACEMENT.z,
     sx: LOBBY_GAMING_LOUNGE_FOOTPRINT.sx,
     sz: LOBBY_GAMING_LOUNGE_FOOTPRINT.sz,
   },
-  { x: -4.25, z: 5.0, sx: 0.45, sz: 0.45 },
-  /** Moved back from (4.25, 4.6) so Meshy station at (3.45, 3.5) stays visible. */
-  { x: 4.2, z: 1.85, sx: 0.45, sz: 0.45 },
-  ...LOBBY_VALORANT_PORTAL_FRAME_OBSTACLES,
+  {
+    x: LOBBY_GAMING_STATION_PLACEMENT.x,
+    z: LOBBY_GAMING_STATION_PLACEMENT.z,
+    sx: LOBBY_GAMING_STATION_FOOTPRINT.sx,
+    sz: LOBBY_GAMING_STATION_FOOTPRINT.sz,
+  },
+  { x: -5.55, z: -1.85, sx: 0.42, sz: 0.42 },
+  { x: 5.55, z: -1.85, sx: 0.42, sz: 0.42 },
+  ...portalFrames,
 ];
 
 export const PERSONAL_LOBBY_CLUB_LAYOUT = {
   halfExtentX: hx,
   halfExtentZ: hz,
   spawnX: 0,
-  spawnZ: 5.2,
+  /** Forward in the club — first frame shows portals + sign + flanking props. */
+  spawnZ: 3.05,
   wallHeight: 3.55,
   wallThickness: 0.32,
   corridorHalfWidth: LOBBY_CORRIDOR_HALF_WIDTH,
-  /** GAME CLUB focal — closer for first-frame read (4B.3B). */
-  signZ: -4.0,
-  farWallZ: -hz + 0.55,
+  /** Centered above CS2 portal row (GAME CLUB neon). */
+  signZ: -2.72,
+  farWallZ: -hz + 0.58,
 } as const;
 
 export const PERSONAL_LOBBY_ARENA: LobbyArenaConfig = {

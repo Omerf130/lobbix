@@ -4,7 +4,6 @@
 import { useMemo } from 'react';
 import { LobbyBoundaryWalls } from '@/components/lobby/lobby-boundary-walls';
 import { LobbyGameClubHub } from '@/components/lobby/lobby-game-club-hub';
-import { LobbyGameEntrance } from '@/components/lobby/lobby-game-entrance';
 import { LobbyGamingLounge } from '@/components/lobby/lobby-gaming-lounge';
 import { LobbyGamingStation } from '@/components/lobby/lobby-gaming-station';
 import { LobbyMeshyGamePortal } from '@/components/lobby/lobby-meshy-game-portal';
@@ -15,6 +14,8 @@ import {
   LOBBY_CLUB_OBSTACLES,
   LOBBY_GAME_ENTRANCES,
   LOBBY_GAMING_LOUNGE_PLACEMENT,
+  LOBBY_GAMING_STATION_PLACEMENT,
+  LOBBY_PORTAL_ROW_Z,
   PERSONAL_LOBBY_CLUB_LAYOUT,
 } from '@/lib/lobby/lobby-club-layout';
 
@@ -22,7 +23,7 @@ type LobbyClubEnvironmentProps = {
   arena: LobbyArenaConfig;
 };
 
-const FLOOR_TILE = 2.5;
+const FLOOR_TILE = 2.05;
 
 function LobbyClubFloor({ halfX, halfZ }: { halfX: number; halfZ: number }) {
   const tiles = useMemo(() => {
@@ -47,11 +48,11 @@ function LobbyClubFloor({ halfX, halfZ }: { halfX: number; halfZ: number }) {
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.001, 0]}>
         <planeGeometry args={[halfX * 2 + 0.6, halfZ * 2 + 0.6]} />
         <meshStandardMaterial
-          color="#0a0e18"
-          roughness={0.55}
-          metalness={0.12}
+          color="#080c16"
+          roughness={0.32}
+          metalness={0.28}
           emissive="#060810"
-          emissiveIntensity={0.04}
+          emissiveIntensity={0.05}
         />
       </mesh>
 
@@ -61,26 +62,90 @@ function LobbyClubFloor({ halfX, halfZ }: { halfX: number; halfZ: number }) {
           rotation={[-Math.PI / 2, 0, 0]}
           position={[t.x, 0.003, t.z]}
           material={t.alt ? lobbyMat.floorA : lobbyMat.floorB}>
-          <planeGeometry args={[FLOOR_TILE * 0.98, FLOOR_TILE * 0.98]} />
+          <planeGeometry args={[FLOOR_TILE * 0.97, FLOOR_TILE * 0.97]} />
         </mesh>
       ))}
-
     </group>
   );
 }
 
-function GamingKiosk({ x, z, glow }: { x: number; z: number; glow: string }) {
+function LobbySpawnMedallion({ spawnZ }: { spawnZ: number }) {
   return (
-    <group position={[x, 0, z]}>
-      <mesh position={[0, 0.42, 0]} material={lobbyMat.desk}>
-        <boxGeometry args={[1.1, 0.84, 0.62]} />
+    <group position={[0, 0.008, spawnZ - 0.35]}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.55, 1.05, 40]} />
+        <meshBasicMaterial color={palette.turquoise} toneMapped={false} transparent opacity={0.22} />
       </mesh>
-      <mesh position={[0, 0.92, -0.08]} material={lobbyMat.monitor}>
-        <boxGeometry args={[0.72, 0.48, 0.06]} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.2, 0.48, 32]} />
+        <meshBasicMaterial color={palette.pink} toneMapped={false} transparent opacity={0.18} />
       </mesh>
-      <mesh position={[0, 0.92, -0.12]}>
-        <boxGeometry args={[0.62, 0.38, 0.02]} />
-        <meshBasicMaterial color={glow} toneMapped={false} transparent opacity={0.65} />
+    </group>
+  );
+}
+
+function LobbySideWallPanels({ hx, halfZ }: { hx: number; halfZ: number }) {
+  const panelZs = useMemo(() => {
+    const zs: number[] = [];
+    for (let z = -halfZ + 1.8; z < halfZ - 0.5; z += 2.8) zs.push(z);
+    return zs;
+  }, [halfZ]);
+
+  return (
+    <>
+      {panelZs.map((z) => (
+        <group key={`side-panels-${z}`}>
+          {[-1, 1].map((side) => (
+            <group key={`${side}-${z}`}>
+              <mesh
+                position={[side * (hx - 0.22), 1.45, z]}
+                material={lobbyMat.wallPanel}
+                rotation={[0, side < 0 ? Math.PI / 2 : -Math.PI / 2, 0]}>
+                <boxGeometry args={[2.2, 2.65, 0.08]} />
+              </mesh>
+              <mesh
+                position={[side * (hx - 0.16), 1.45, z]}
+                rotation={[0, side < 0 ? Math.PI / 2 : -Math.PI / 2, 0]}>
+                <boxGeometry args={[0.04, 2.4, 0.02]} />
+                <meshBasicMaterial
+                  color={side < 0 ? palette.turquoise : palette.pink}
+                  toneMapped={false}
+                  transparent
+                  opacity={0.32}
+                />
+              </mesh>
+            </group>
+          ))}
+        </group>
+      ))}
+    </>
+  );
+}
+
+function LobbyBackWallBand({
+  halfX,
+  farWallZ,
+  wallH,
+}: {
+  halfX: number;
+  farWallZ: number;
+  wallH: number;
+}) {
+  const bandW = halfX * 2 + 0.4;
+  return (
+    <group position={[0, 0, farWallZ]}>
+      <mesh position={[0, wallH * 0.48, 0.08]} material={lobbyMat.wallDeep}>
+        <boxGeometry args={[bandW, wallH, 0.24]} />
+      </mesh>
+      {LOBBY_GAME_ENTRANCES.map((e) => (
+        <mesh key={`portal-glow-${e.id}`} position={[e.x, 1.05, 0.18]}>
+          <boxGeometry args={[1.55, 2.05, 0.04]} />
+          <meshBasicMaterial color={e.glow} toneMapped={false} transparent opacity={0.12} />
+        </mesh>
+      ))}
+      <mesh position={[0, wallH - 0.22, 0.14]}>
+        <boxGeometry args={[bandW * 0.88, 0.14, 0.06]} />
+        <meshBasicMaterial color={palette.purple} toneMapped={false} transparent opacity={0.35} />
       </mesh>
     </group>
   );
@@ -106,14 +171,6 @@ export function LobbyClubEnvironment({ arena }: LobbyClubEnvironmentProps) {
   const wallH = layout.wallHeight;
   const wallT = layout.wallThickness;
   const hx = arena.halfExtentX + wallT / 2;
-  const hz = arena.halfExtentZ + wallT / 2;
-  const cw = layout.corridorHalfWidth;
-
-  const beamZs = useMemo(() => {
-    const zs: number[] = [];
-    for (let z = -hz + 2; z < hz; z += 3.6) zs.push(z);
-    return zs;
-  }, [hz]);
 
   const plantPositions = useMemo(
     () =>
@@ -129,13 +186,13 @@ export function LobbyClubEnvironment({ arena }: LobbyClubEnvironmentProps) {
     <>
       <color attach="background" args={['#0B1020']} />
 
-      <hemisphereLight args={['#9AACD8', '#221840', 0.82]} />
-      <ambientLight intensity={0.58} color="#F0F2FA" />
-      <directionalLight position={[2, 11, 6]} intensity={1.05} color="#FFF8F0" />
-      <directionalLight position={[-4, 8, -2]} intensity={0.52} color={palette.purple} />
-      <directionalLight position={[0, 5, 4]} intensity={0.35} color={palette.turquoise} />
+      <hemisphereLight args={['#8A9EC8', '#1E1438', 0.78]} />
+      <ambientLight intensity={0.52} color="#E8ECFA" />
+      <directionalLight position={[2, 10, 5]} intensity={0.95} color="#FFF8F0" />
+      <directionalLight position={[-3, 7, -1]} intensity={0.45} color={palette.purple} />
 
       <LobbyClubFloor halfX={arena.halfExtentX} halfZ={arena.halfExtentZ} />
+      <LobbySpawnMedallion spawnZ={arena.spawnZ} />
 
       <LobbyBoundaryWalls
         arena={arena}
@@ -147,66 +204,50 @@ export function LobbyClubEnvironment({ arena }: LobbyClubEnvironmentProps) {
         floorW={floorW}
       />
 
-      <LobbyGameClubHub signZ={layout.signZ} corridorHalfWidth={cw} />
+      <LobbySideWallPanels hx={hx} halfZ={arena.halfExtentZ} />
 
-      {beamZs.map((z) => (
-        <group key={`beam-${z}`}>
-          <mesh position={[0, wallH - 0.18, z]} material={lobbyMat.beam}>
-            <boxGeometry args={[floorW * 0.86, 0.2, 0.34]} />
-          </mesh>
-          <mesh position={[-cw - 0.12, wallH - 0.3, z]}>
-            <boxGeometry args={[0.1, 0.06, 0.06]} />
-            <meshBasicMaterial color={palette.turquoise} toneMapped={false} />
-          </mesh>
-          <mesh position={[cw + 0.12, wallH - 0.3, z]}>
-            <boxGeometry args={[0.1, 0.06, 0.06]} />
-            <meshBasicMaterial color={palette.pink} toneMapped={false} />
-          </mesh>
-        </group>
+      <LobbyBackWallBand
+        halfX={arena.halfExtentX}
+        farWallZ={layout.farWallZ}
+        wallH={wallH}
+      />
+
+      {LOBBY_GAME_ENTRANCES.map((entrance) => (
+        <LobbyMeshyGamePortal key={entrance.id} entrance={entrance} />
       ))}
 
-      {LOBBY_GAME_ENTRANCES.map((entrance) =>
-        entrance.id === 'valorant' ? (
-          <LobbyMeshyGamePortal
-            key={entrance.id}
-            entrance={entrance}
-            wallX={-hx}
-          />
-        ) : (
-          <LobbyGameEntrance
-            key={entrance.id}
-            entrance={entrance}
-            wallX={entrance.side === 'left' ? -hx : hx}
-          />
-        ),
-      )}
-
-      <GamingKiosk x={-3.45} z={4.0} glow="#5CE1FF" />
-      <LobbyGamingStation x={3.45} z={3.5} rotationY={Math.PI} />
-      <GamingKiosk x={-3.55} z={1.2} glow="#FF8A7A" />
-      <GamingKiosk x={3.55} z={0.2} glow="#00C2FF" />
+      <LobbyGameClubHub signZ={layout.signZ} />
 
       <LobbyGamingLounge
         x={LOBBY_GAMING_LOUNGE_PLACEMENT.x}
         z={LOBBY_GAMING_LOUNGE_PLACEMENT.z}
         rotationY={LOBBY_GAMING_LOUNGE_PLACEMENT.rotationY}
       />
+      <LobbyGamingStation
+        x={LOBBY_GAMING_STATION_PLACEMENT.x}
+        z={LOBBY_GAMING_STATION_PLACEMENT.z}
+        rotationY={LOBBY_GAMING_STATION_PLACEMENT.rotationY}
+      />
 
       {plantPositions.map((p) => (
         <DecorativePlant key={p.key} x={p.x} z={p.z} />
       ))}
 
-      <pointLight position={[0, 2.9, arena.spawnZ - 1.2]} intensity={0.62} color="#FFF4E8" distance={12} />
-      <pointLight position={[0, 2.5, layout.signZ + 1.2]} intensity={0.48} color={palette.turquoise} distance={9} />
-      <pointLight position={[0, 2.4, 1.5]} intensity={0.42} color={palette.purple} distance={10} />
-      <pointLight position={[-3.2, 2.3, 3.8]} intensity={0.4} color={palette.turquoise} distance={7} />
-      <pointLight position={[3.2, 2.3, 3.5]} intensity={0.48} color="#C8B0FF" distance={7} />
+      <pointLight position={[0, 2.8, arena.spawnZ - 0.6]} intensity={0.55} color="#FFF4E8" distance={10} />
+      <pointLight position={[0, 2.6, layout.signZ + 0.5]} intensity={0.5} color={palette.turquoise} distance={8} />
       <pointLight
-        position={[LOBBY_GAMING_LOUNGE_PLACEMENT.x - 0.4, 2.1, LOBBY_GAMING_LOUNGE_PLACEMENT.z]}
+        position={[LOBBY_GAMING_LOUNGE_PLACEMENT.x + 0.5, 2.2, LOBBY_GAMING_LOUNGE_PLACEMENT.z]}
         intensity={0.38}
-        color="#B8A0E8"
-        distance={6}
+        color="#C8A8FF"
+        distance={5.5}
       />
+      <pointLight
+        position={[LOBBY_GAMING_STATION_PLACEMENT.x - 0.5, 2.2, LOBBY_GAMING_STATION_PLACEMENT.z]}
+        intensity={0.42}
+        color={palette.turquoise}
+        distance={5.5}
+      />
+      <pointLight position={[0, 2.2, LOBBY_PORTAL_ROW_Z + 0.8]} intensity={0.35} color={palette.purple} distance={7} />
     </>
   );
 }

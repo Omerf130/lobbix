@@ -27,18 +27,44 @@ function segmentIntersectsAabb(p0x, p0y, p0z, p1x, p1y, p1z, box) {
   return tmin <= tmax;
 }
 
-const leftWall = { minX: -6.17, maxX: -5.85, minY: 0, maxY: 3.55, minZ: -8.2, maxZ: 8.2 };
+/** Mirrors PERSONAL_LOBBY_CLUB_LAYOUT (4B.3E) — update when arena bounds change. */
+const hx = 6.15;
+const hz = 4.65;
+const wallT = 0.32;
+const wallH = 3.55;
+const spawnZ = 3.05;
+const farWallZ = -hz + 0.58;
+const boundaryHx = hx + wallT / 2;
+const halfD = hz * 2 + 1.4;
+const halfD2 = halfD / 2;
+
+const leftWall = {
+  minX: -boundaryHx - wallT / 2,
+  maxX: -boundaryHx + wallT / 2,
+  minY: 0,
+  maxY: wallH,
+  minZ: -halfD2,
+  maxZ: halfD2,
+};
 
 // Camera beside spawn looking at avatar — should hit left/right shell when orbited.
 assert.ok(
-  segmentIntersectsAabb(-6.0, 2.5, 5.2, 0, 1, 5.2, leftWall),
+  segmentIntersectsAabb(-6.5, 2.5, spawnZ, 0, 1, spawnZ, leftWall),
   'side orbit should intersect left boundary',
 );
 
 // Center corridor spawn view should not require far wall between cam and avatar at yaw π.
-const farWall = { minX: -6, maxX: 6, minY: 0, maxY: 3.55, minZ: -7.12, maxZ: -6.8 };
+const farWall = {
+  minX: -(hx * 2 + 1.4) / 2,
+  maxX: (hx * 2 + 1.4) / 2,
+  minY: 0,
+  maxY: wallH,
+  minZ: farWallZ - wallT / 2,
+  maxZ: farWallZ + wallT / 2,
+};
+const camZ = spawnZ + 5.8 * Math.cos(0.35);
 assert.ok(
-  !segmentIntersectsAabb(0, 3, 10.5, 0, 1, 5.2, farWall),
+  !segmentIntersectsAabb(0, 3, camZ, 0, 1, spawnZ, farWall),
   'spawn +Z camera to avatar should not cross far wall',
 );
 
