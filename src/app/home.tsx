@@ -1,50 +1,169 @@
-import { Link, type Href } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+'use no memo';
 
-import { LobbixButton } from '@/components/ui/lobbix-button';
+import { router, type Href } from 'expo-router';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { MovementTouchControls } from '@/components/dev/movement-touch-controls';
+import { PersonalLobbyScene } from '@/components/lobby/personal-lobby-scene';
+import { SceneErrorBoundary } from '@/components/dev/scene-error-boundary';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { MaxContentWidth, palette, Radius, Spacing } from '@/constants/theme';
+import { palette, Radius, Spacing } from '@/constants/theme';
 import { getStrings } from '@/i18n';
+import { getPostBootNavigationHref } from '@/lib/onboarding/resume-route';
+import { PERSONAL_LOBBY_ARENA } from '@/lib/lobby/lobby-arena';
+import { preloadLobbyGamePortalGlb } from '@/lib/lobby/game-portal-model';
+import { preloadLobbyGamingLoungeGlb } from '@/lib/lobby/gaming-lounge-model';
+import { preloadLobbyGamingStationGlb } from '@/lib/lobby/gaming-station-model';
+import { loadLocalProfile } from '@/lib/profile/profile-storage';
+import {
+  preloadAvatarAnimatedGlbModule,
+  resolveAvatarAnimatedGlbModule,
+  resolveAvatarIdFromProfile,
+} from '@/lib/profile/resolve-avatar-model';
+import {
+  createPersonalLobbyMovementControlState,
+  resetPersonalLobbyMovementControlState,
+} from '@/lib/movement-control-state';
+import {
+  MOVEMENT_JOYSTICK_OUTER_SIZE,
+  MOVEMENT_TOUCH_MARGIN,
+  physicalBottomLeftReserveStyle,
+} from '@/lib/touch-control-layout';
 
-export default function TemporaryHomeScreen() {
+export default function PersonalLobbyScreen() {
   const strings = getStrings();
+  const insets = useSafeAreaInsets();
+  const [controls] = useState(createPersonalLobbyMovementControlState);
+  const [resetKey] = useState(0);
+  const [gateReady, setGateReady] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [fatalError, setFatalError] = useState<string | null>(null);
+  const [playerLabel, setPlayerLabel] = useState('');
+
+  const [resolvedGlb, setResolvedGlb] = useState<ReturnType<
+    typeof resolveAvatarAnimatedGlbModule
+  > | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const href = await getPostBootNavigationHref();
+      if (!active) return;
+      if (href && href !== '/home') {
+        router.replace(href);
+        return;
+      }
+
+      const profile = await loadLocalProfile();
+      if (!active) return;
+      if (!profile?.onboarding.onboardingCompleted) {
+        router.replace((href ?? '/') as Href);
+        return;
+      }
+
+      const avatarId = resolveAvatarIdFromProfile(profile.avatarId);
+      const module = resolveAvatarAnimatedGlbModule(avatarId);
+      setResolvedGlb(module);
+      preloadAvatarAnimatedGlbModule(module);
+      preloadLobbyGamingStationGlb();
+      preloadLobbyGamingLoungeGlb();
+      preloadLobbyGamePortalGlb();
+
+      const name = profile.displayName?.trim() || profile.username;
+      setPlayerLabel(name);
+      setGateReady(true);
+    })();
+
+    return () => {
+      active = false;
+      resetPersonalLobbyMovementControlState(controls);
+    };
+  }, [controls]);
+
+  const handleReady = useCallback(() => {
+    setIsLoading(false);
+  }, []);
+
+  const handleGlError = useCallback((message: string) => {
+    setFatalError(message);
+    setIsLoading(false);
+  }, []);
+
+  const bottomInset = MOVEMENT_TOUCH_MARGIN + insets.bottom;
+  const actionReserveStyle = useMemo(
+    () =>
+      physicalBottomLeftReserveStyle(
+        MOVEMENT_TOUCH_MARGIN,
+        bottomInset,
+        MOVEMENT_JOYSTICK_OUTER_SIZE,
+        MOVEMENT_JOYSTICK_OUTER_SIZE,
+      ),
+    [bottomInset],
+  );
+
+  if (!gateReady || !resolvedGlb) {
+    return (
+      <ThemedView style={styles.root}>
+        <View style={styles.bootLoading}>
+          <ActivityIndicator color={palette.turquoise} />
+        </View>
+      </ThemedView>
+    );
+  }
 
   return (
     <ThemedView style={styles.root}>
-      <SafeAreaView style={styles.safe}>
-        <View style={styles.card}>
-          <ThemedText type="title" style={styles.title}>
-            {strings.homeTitle}
+      {!fatalError ? (
+        <SceneErrorBoundary onError={handleGlError}>
+          <Suspense
+            fallback={
+              <View style={styles.bootLoading}>
+                <ActivityIndicator color={palette.turquoise} size="large" />
+                <ThemedText type="caption" themeColor="textSecondary">
+                  {strings.homeLobbyLoading}
+                </ThemedText>
+              </View>
+            }>
+            <PersonalLobbyScene
+              glbModule={resolvedGlb}
+              arena={PERSONAL_LOBBY_ARENA}
+              controls={controls}
+              resetKey={resetKey}
+              onReady={handleReady}
+            />
+          </Suspense>
+        </SceneErrorBoundary>
+      ) : (
+        <View style={styles.bootLoading}>
+          <ThemedText type="subtitle" themeColor="accentPink">
+            {strings.homeLobbyErrorTitle}
           </ThemedText>
-          <ThemedText type="body" themeColor="textSecondary" style={styles.body}>
-            {strings.homeSubtitle}
+          <ThemedText type="caption" themeColor="textSecondary" style={styles.errorText}>
+            {fatalError}
           </ThemedText>
-          <ThemedText type="caption" themeColor="textSecondary" style={styles.body}>
-            {strings.homeContinueHint}
+        </View>
+      )}
+
+      {isLoading && !fatalError ? (
+        <View style={styles.loadingOverlay} pointerEvents="none">
+          <ActivityIndicator color={palette.turquoise} />
+        </View>
+      ) : null}
+
+      {!fatalError ? <MovementTouchControls controls={controls} /> : null}
+
+      <SafeAreaView style={styles.hud} pointerEvents="box-none" edges={['top']}>
+        <View style={styles.hudTop} pointerEvents="none">
+          <ThemedText type="caption" themeColor="textSecondary" style={styles.hudName}>
+            {strings.homeLobbyPlayer.replace('{{name}}', playerLabel)}
           </ThemedText>
-          <Link href="/" asChild>
-            <LobbixButton label={strings.backToWelcome} variant="secondary" />
-          </Link>
-          {__DEV__ ? (
-            <View style={styles.devBlock}>
-              <ThemedText type="caption" themeColor="accentPurple" style={styles.devLabel}>
-                {strings.devSectionLabel}
-              </ThemedText>
-              <Link href={'/dev/movement-test' as Href} asChild>
-                <Pressable
-                  accessibilityRole="button"
-                  style={({ pressed }) => [styles.devLink, pressed && styles.devLinkPressed]}>
-                  <ThemedText type="caption" themeColor="accentTurquoise">
-                    {strings.devMovementButton}
-                  </ThemedText>
-                </Pressable>
-              </Link>
-            </View>
-          ) : null}
         </View>
       </SafeAreaView>
+
+      <View style={[styles.actionReserve, actionReserveStyle]} pointerEvents="none" />
     </ThemedView>
   );
 }
@@ -52,46 +171,45 @@ export default function TemporaryHomeScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+    backgroundColor: palette.navy900,
   },
-  safe: {
+  bootLoading: {
     flex: 1,
-    padding: Spacing.lg,
     justifyContent: 'center',
-  },
-  card: {
-    maxWidth: MaxContentWidth,
-    width: '100%',
-    alignSelf: 'center',
-    gap: Spacing.md,
-    borderWidth: 1,
-    borderColor: palette.border,
-    backgroundColor: palette.navy800,
-    borderRadius: Radius.lg,
+    alignItems: 'center',
+    gap: Spacing.sm,
     padding: Spacing.lg,
   },
-  title: {
-    textAlign: 'right',
-  },
-  body: {
-    textAlign: 'right',
-  },
-  devBlock: {
-    marginTop: Spacing.md,
-    gap: Spacing.sm,
-    alignItems: 'stretch',
-  },
-  devLabel: {
-    textAlign: 'right',
-  },
-  devLink: {
+  loadingOverlay: {
+    ...StyleSheet.absoluteFill,
+    justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: palette.border,
-    backgroundColor: palette.navy700,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radius.md,
+    backgroundColor: 'rgba(11, 16, 32, 0.35)',
   },
-  devLinkPressed: {
-    opacity: 0.88,
+  errorText: {
+    textAlign: 'center',
+  },
+  hud: {
+    ...StyleSheet.absoluteFill,
+    zIndex: 25,
+    elevation: 25,
+    paddingHorizontal: Spacing.md,
+  },
+  hudTop: {
+    paddingTop: Spacing.xs,
+    alignItems: 'flex-end',
+  },
+  hudName: {
+    textAlign: 'right',
+    backgroundColor: 'rgba(11, 16, 32, 0.55)',
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: Radius.sm,
+    overflow: 'hidden',
+    maxWidth: '55%',
+  },
+  actionReserve: {
+    zIndex: 5,
+    elevation: 5,
   },
 });

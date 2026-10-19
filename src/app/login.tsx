@@ -9,6 +9,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { getStrings } from '@/i18n';
 import { mockLogin } from '@/lib/auth/mock-auth';
+import { getPostBootNavigationHref } from '@/lib/onboarding/resume-route';
 import { fieldErrorMessage, mockAuthErrorMessage } from '@/lib/i18n/auth-errors';
 import {
   AUTH_LOGIN_PASSWORD_MIN_LENGTH,
@@ -53,7 +54,8 @@ export default function LoginScreen() {
       return;
     }
 
-    router.replace('/home' as Href);
+    const href = (await getPostBootNavigationHref()) ?? ('/home' as Href);
+    router.replace(href);
   }, [email, password, strings]);
 
   return (

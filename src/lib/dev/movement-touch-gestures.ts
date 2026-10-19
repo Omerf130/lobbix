@@ -3,6 +3,7 @@ import type { View } from 'react-native';
 import { Gesture } from 'react-native-gesture-handler';
 import { runOnJS, useSharedValue } from 'react-native-reanimated';
 
+import { cameraFollowDistanceFromPinchScale } from '@/lib/camera-follow-distance';
 import { cameraOrbitFromPanDelta } from '@/lib/camera-orbit-drag';
 import type { MovementControlState } from '@/lib/movement-control-state';
 import { MOVEMENT_JOYSTICK_OUTER_SIZE } from '@/lib/touch-control-layout';
@@ -11,7 +12,8 @@ const THUMB_SIZE = 52;
 const JOYSTICK_MAX_RADIUS = (MOVEMENT_JOYSTICK_OUTER_SIZE - THUMB_SIZE) / 2;
 
 export type MovementTouchGestures = {
-  cameraPan: ReturnType<typeof Gesture.Pan>;
+  /** One-finger orbit + two-finger pinch zoom (camera pane). */
+  cameraGesture: ReturnType<typeof Gesture.Simultaneous>;
   joystickPan: ReturnType<typeof Gesture.Pan>;
 };
 
@@ -81,15 +83,35 @@ export function useMovementTouchGestures({
     controls.moveY = 0;
   }, [controls, thumbViewRef]);
 
+  const pinchStartDistanceRef = useRef(controls.cameraDistance);
+
+  const beginPinchZoom = useCallback(() => {
+    pinchStartDistanceRef.current = controls.cameraDistance;
+  }, [controls]);
+
+  const applyPinchZoom = useCallback(
+    (scale: number) => {
+      controls.cameraDistance = cameraFollowDistanceFromPinchScale(
+        pinchStartDistanceRef.current,
+        scale,
+      );
+    },
+    [controls],
+  );
+
   const applyCameraDeltaRef = useRef(applyCameraDelta);
   const applyJoystickRef = useRef(applyJoystickTranslation);
   const resetJoystickRef = useRef(resetJoystick);
+  const beginPinchZoomRef = useRef(beginPinchZoom);
+  const applyPinchZoomRef = useRef(applyPinchZoom);
 
   useEffect(() => {
     applyCameraDeltaRef.current = applyCameraDelta;
     applyJoystickRef.current = applyJoystickTranslation;
     resetJoystickRef.current = resetJoystick;
-  }, [applyCameraDelta, applyJoystickTranslation, resetJoystick]);
+    beginPinchZoomRef.current = beginPinchZoom;
+    applyPinchZoomRef.current = applyPinchZoom;
+  }, [applyCameraDelta, applyJoystickTranslation, resetJoystick, beginPinchZoom, applyPinchZoom]);
 
   return useMemo(() => {
     const cameraPan = Gesture.Pan()
@@ -113,6 +135,16 @@ export function useMovementTouchGestures({
         cameraLastY.value = 0;
       });
 
+    const cameraPinch = Gesture.Pinch()
+      .onStart(() => {
+        runOnJS(beginPinchZoomRef.current)();
+      })
+      .onUpdate((event) => {
+        runOnJS(applyPinchZoomRef.current)(event.scale);
+      });
+
+    const cameraGesture = Gesture.Simultaneous(cameraPinch, cameraPan);
+
     const joystickPan = Gesture.Pan()
       .minPointers(1)
       .maxPointers(1)
@@ -131,6 +163,6 @@ export function useMovementTouchGestures({
       });
 
     // Separate hit targets — no simultaneousWithExternalGesture (3B.5D.3 Android mount crash).
-    return { cameraPan, joystickPan };
+    return { cameraGesture, joystickPan };
   }, [cameraLastX, cameraLastY]);
 }

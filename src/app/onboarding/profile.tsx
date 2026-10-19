@@ -76,7 +76,7 @@ export default function ProfileCreationScreen() {
   return (
     <OnboardingScreenShell
       step={1}
-      stepLabel={strings.onboardingStepLabel.replace('{{current}}', '1').replace('{{total}}', '3')}
+      stepLabel={strings.onboardingStepLabel.replace('{{current}}', '1').replace('{{total}}', '2')}
       title={strings.profileCreateTitle}
       subtitle={strings.profileCreateSubtitle}>
       <LobbixTextField

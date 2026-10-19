@@ -10,6 +10,26 @@ export type CameraOrbitDragResult = {
   cameraPitch: number;
 };
 
+/** Suppress accidental pitch/yaw cross-talk from slightly diagonal pans. */
+export function filterCameraPanDeltaForDominantAxis(
+  changeX: number,
+  changeY: number,
+  dominanceRatio = 1.25,
+): { changeX: number; changeY: number } {
+  const absX = Math.abs(changeX);
+  const absY = Math.abs(changeY);
+  if (absX === 0 && absY === 0) {
+    return { changeX: 0, changeY: 0 };
+  }
+  if (absX > absY * dominanceRatio) {
+    return { changeX, changeY: 0 };
+  }
+  if (absY > absX * dominanceRatio) {
+    return { changeX: 0, changeY };
+  }
+  return { changeX, changeY };
+}
+
 /** Apply one pan update (change since last event) to orbit yaw/pitch. */
 export function cameraOrbitFromPanDelta(
   cameraYaw: number,
@@ -19,6 +39,10 @@ export function cameraOrbitFromPanDelta(
   viewportWidth: number,
   viewportHeight: number,
 ): CameraOrbitDragResult {
+  const filtered = filterCameraPanDeltaForDominantAxis(changeX, changeY);
+  changeX = filtered.changeX;
+  changeY = filtered.changeY;
+
   if (changeX === 0 && changeY === 0) {
     return { cameraYaw, cameraPitch };
   }

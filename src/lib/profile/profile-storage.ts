@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { DEFAULT_AVATAR_ID, type AvatarId } from '@/lib/profile/avatar-catalog';
 import {
   DEFAULT_AVATAR_CUSTOMIZATION,
   normalizeAvatarCustomization,
@@ -11,7 +12,7 @@ import {
   type OnboardingProgress,
 } from '@/lib/profile/types';
 
-const STORAGE_KEY = '@lobbix/local-profile/v1';
+export const LOCAL_PROFILE_STORAGE_KEY = '@lobbix/local-profile/v1';
 
 function normalizeOnboarding(raw: OnboardingProgress): OnboardingProgress {
   return {
@@ -19,6 +20,7 @@ function normalizeOnboarding(raw: OnboardingProgress): OnboardingProgress {
     profileCompleted: Boolean(raw.profileCompleted),
     avatarStepCompleted: Boolean(raw.avatarStepCompleted),
     gamesStepCompleted: Boolean(raw.gamesStepCompleted),
+    onboardingCompleted: Boolean(raw.onboardingCompleted),
   };
 }
 
@@ -40,7 +42,7 @@ function parseProfile(raw: string): LocalUserProfile | null {
 
 /** Load persisted profile + onboarding (no passwords). */
 export async function loadLocalProfile(): Promise<LocalUserProfile | null> {
-  const raw = await AsyncStorage.getItem(STORAGE_KEY);
+  const raw = await AsyncStorage.getItem(LOCAL_PROFILE_STORAGE_KEY);
   if (!raw) return null;
   return parseProfile(raw);
 }
@@ -53,7 +55,7 @@ export async function saveLocalProfile(profile: LocalUserProfile): Promise<void>
     ),
     updatedAt: new Date().toISOString(),
   };
-  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  await AsyncStorage.setItem(LOCAL_PROFILE_STORAGE_KEY, JSON.stringify(payload));
 }
 
 /** Marks onboarding in progress after mock registration (no credentials stored). */
@@ -85,6 +87,7 @@ export async function completeProfileStep(
       profileCompleted: true,
       avatarStepCompleted: false,
       gamesStepCompleted: false,
+      onboardingCompleted: false,
     },
     updatedAt: new Date().toISOString(),
   };
@@ -103,6 +106,29 @@ export async function saveAvatarCustomizationDraft(
   });
 }
 
+/** Confirms real GLB avatar selection (single male Chibi for 3B.6). */
+export async function completeAvatarSelection(avatarId: AvatarId): Promise<LocalUserProfile> {
+  const existing = await loadLocalProfile();
+  if (!existing) {
+    throw new Error('Profile missing');
+  }
+  const next: LocalUserProfile = {
+    ...existing,
+    avatarId,
+    onboarding: {
+      currentStep: 2,
+      profileCompleted: true,
+      avatarStepCompleted: true,
+      gamesStepCompleted: true,
+      onboardingCompleted: false,
+    },
+    updatedAt: new Date().toISOString(),
+  };
+  await saveLocalProfile(next);
+  return next;
+}
+
+/** @deprecated Procedural customization — kept for dev/tests referencing old flow. */
 export async function completeAvatarStep(
   customization: AvatarCustomization,
 ): Promise<LocalUserProfile> {
@@ -113,11 +139,31 @@ export async function completeAvatarStep(
   const next: LocalUserProfile = {
     ...existing,
     avatarCustomization: normalizeAvatarCustomization(customization),
+    avatarId: DEFAULT_AVATAR_ID,
     onboarding: {
-      currentStep: 3,
+      currentStep: 2,
       profileCompleted: true,
       avatarStepCompleted: true,
-      gamesStepCompleted: false,
+      gamesStepCompleted: true,
+      onboardingCompleted: false,
+    },
+    updatedAt: new Date().toISOString(),
+  };
+  await saveLocalProfile(next);
+  return next;
+}
+
+export async function completeOnboardingFlow(): Promise<LocalUserProfile> {
+  const existing = await loadLocalProfile();
+  if (!existing) {
+    throw new Error('Profile missing');
+  }
+  const next: LocalUserProfile = {
+    ...existing,
+    onboarding: {
+      ...normalizeOnboarding(existing.onboarding),
+      onboardingCompleted: true,
+      gamesStepCompleted: true,
     },
     updatedAt: new Date().toISOString(),
   };

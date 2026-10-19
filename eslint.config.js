@@ -37,6 +37,13 @@ module.exports = defineConfig([
       'src/components/dev/chibi-test-scene.tsx',
       'src/components/dev/chibi-animated-test-scene.tsx',
       'src/components/dev/chibi-movement-test-scene.tsx',
+      'src/components/avatar/chibi-movement-rig.tsx',
+      'src/components/lobby/personal-lobby-scene.tsx',
+      'src/components/lobby/lobby-club-environment.tsx',
+      'src/components/lobby/lobby-dot-matrix-sign.tsx',
+      'src/components/lobby/lobby-game-entrance.tsx',
+      'src/components/avatar/chibi-glb-preview-scene.tsx',
+      'src/app/home.tsx',
     ],
     rules: {
       // R3F useFrame: AnimationMixer + counter root-motion on loaded GLTF scene.

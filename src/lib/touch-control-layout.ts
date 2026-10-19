@@ -86,3 +86,25 @@ export function physicalJoystickHostStyle(): ViewStyle {
 
 /** Margin used by movement touch controls (kept in sync with joystick placement). */
 export const MOVEMENT_TOUCH_MARGIN = Spacing.md;
+
+/** Reserves physical bottom-left for future action buttons (no touch handling). */
+export function physicalBottomLeftReserveStyle(
+  margin: number,
+  bottom: number,
+  width: number,
+  height: number,
+): ViewStyle {
+  const base: ViewStyle = {
+    position: 'absolute',
+    bottom,
+    width,
+    height,
+    ...PHYSICAL_LTR_OVERLAY,
+  };
+
+  if (I18nManager.isRTL) {
+    return { ...base, right: margin };
+  }
+
+  return { ...base, left: margin };
+}

@@ -21,7 +21,9 @@ export default function GamesOnboardingPlaceholderScreen() {
       }
       if (!profile.onboarding.avatarStepCompleted) {
         router.replace('/onboarding/avatar' as Href);
+        return;
       }
+      router.replace('/onboarding/complete' as Href);
     });
   }, []);
 

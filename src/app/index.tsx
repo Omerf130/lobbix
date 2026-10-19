@@ -11,8 +11,8 @@ import { ThemedView } from '@/components/themed-view';
 import { WelcomeImages } from '@/constants/welcome-images';
 import { palette, Spacing } from '@/constants/theme';
 import { getStrings } from '@/i18n';
-import { DevMenuGear } from '@/components/dev/dev-menu-gear';
-import { getResumeOnboardingHref } from '@/lib/onboarding/resume-route';
+import { getPostBootNavigationHref } from '@/lib/onboarding/resume-route';
+import { runOneTimeDevReset3B6IfNeeded } from '@/lib/onboarding/one-time-dev-reset-3b6';
 
 export default function WelcomeScreen() {
   const strings = getStrings();
@@ -34,11 +34,13 @@ export default function WelcomeScreen() {
 
   useEffect(() => {
     let active = true;
-    getResumeOnboardingHref().then((href) => {
+    (async () => {
+      await runOneTimeDevReset3B6IfNeeded();
+      const href = await getPostBootNavigationHref();
       if (!active) return;
-      if (href) router.replace(href);
+      if (href && href !== '/') router.replace(href);
       setBootReady(true);
-    });
+    })();
     return () => {
       active = false;
     };
@@ -91,7 +93,6 @@ export default function WelcomeScreen() {
             </Link>
           </View>
         </ScrollView>
-        <DevMenuGear />
       </SafeAreaView>
     </ThemedView>
   );

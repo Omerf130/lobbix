@@ -32,7 +32,7 @@ export function MovementTouchControls({ controls }: MovementTouchControlsProps) 
   const bottom = margin + insets.bottom;
   const thumbViewRef = useRef<View>(null);
 
-  const { cameraPan, joystickPan } = useMovementTouchGestures({
+  const { cameraGesture, joystickPan } = useMovementTouchGestures({
     controls,
     viewportWidth: width,
     viewportHeight: height,
@@ -51,7 +51,7 @@ export function MovementTouchControls({ controls }: MovementTouchControlsProps) 
 
   return (
     <>
-      <GestureDetector gesture={cameraPan}>
+      <GestureDetector gesture={cameraGesture}>
         <View style={[styles.cameraPane, cameraPaneStyle]} collapsable={false} />
       </GestureDetector>
 

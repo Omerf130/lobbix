@@ -1,63 +1,51 @@
 'use no memo';
 
 import { router, type Href } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AvatarPreviewScene } from '@/components/avatar/avatar-preview-scene';
-import { DevMenuGear } from '@/components/dev/dev-menu-gear';
-import { ColorSwatchRow } from '@/components/ui/color-swatch-row';
+import {
+  ChibiGlbPreviewFallback,
+  ChibiGlbPreviewScene,
+  preloadChibiGlbPreviewAsset,
+} from '@/components/avatar/chibi-glb-preview-scene';
 import { GamingBackdrop } from '@/components/ui/gaming-backdrop';
 import { LobbixButton } from '@/components/ui/lobbix-button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, palette, Radius, Spacing } from '@/constants/theme';
 import { getStrings } from '@/i18n';
-import {
-  CLOTHING_COLOR_OPTIONS,
-  DEFAULT_AVATAR_CUSTOMIZATION,
-  HAIR_COLOR_OPTIONS,
-  resolveClothingHex,
-  resolveHairHex,
-  resolveShoesHex,
-  SHOES_COLOR_OPTIONS,
-  type AvatarCustomization,
-} from '@/lib/profile/avatar-customization';
-import {
-  completeAvatarStep,
-  loadLocalProfile,
-  saveAvatarCustomizationDraft,
-} from '@/lib/profile/profile-storage';
+import { AVATAR_ID_CHIBI_MALE_V1 } from '@/lib/profile/avatar-catalog';
+import { completeAvatarSelection, loadLocalProfile } from '@/lib/profile/profile-storage';
 
-export default function AvatarCustomizationScreen() {
+export default function AvatarSelectionScreen() {
   const strings = getStrings();
   const { height } = useWindowDimensions();
   const spinYRef = useRef(0);
-  const [customization, setCustomization] = useState<AvatarCustomization>(
-    DEFAULT_AVATAR_CUSTOMIZATION,
-  );
   const [loading, setLoading] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
 
-  const previewHeight = useMemo(() => Math.min(Math.max(height * 0.36, 240), 360), [height]);
+  const previewHeight = useMemo(() => Math.min(Math.max(height * 0.38, 260), 380), [height]);
 
   useEffect(() => {
+    preloadChibiGlbPreviewAsset();
     loadLocalProfile().then((profile) => {
-      const devBypass = __DEV__ && !profile?.onboarding.profileCompleted;
-      if (!profile?.onboarding.profileCompleted && !devBypass) {
+      if (!profile?.onboarding.profileCompleted) {
         router.replace('/onboarding/profile' as Href);
         return;
       }
-      if (profile?.onboarding.avatarStepCompleted && !__DEV__) {
-        router.replace('/onboarding/games-placeholder' as Href);
+      if (profile.onboarding.avatarStepCompleted && profile.onboarding.onboardingCompleted) {
+        router.replace('/home' as Href);
         return;
       }
-      if (profile?.avatarCustomization) {
-        setCustomization(profile.avatarCustomization);
+      if (profile.onboarding.avatarStepCompleted) {
+        router.replace('/onboarding/complete' as Href);
+        return;
       }
       setHydrated(true);
     });
@@ -100,32 +88,24 @@ export default function AvatarCustomizationScreen() {
     [applyPreviewPan, resetPreviewPan],
   );
 
-  const updateCustomization = useCallback((patch: Partial<AvatarCustomization>) => {
-    setCustomization((prev) => {
-      const next = { ...prev, ...patch };
-      void saveAvatarCustomizationDraft(next);
-      return next;
-    });
-  }, []);
-
-  const handleContinue = useCallback(async () => {
+  const handleSelectAvatar = useCallback(async () => {
     setLoading(true);
     setFormError(null);
     try {
-      await completeAvatarStep(customization);
-      router.replace('/onboarding/games-placeholder' as Href);
+      await completeAvatarSelection(AVATAR_ID_CHIBI_MALE_V1);
+      router.replace('/onboarding/complete' as Href);
     } catch {
       setFormError(strings.avatarSaveFailed);
     } finally {
       setLoading(false);
     }
-  }, [customization, strings.avatarSaveFailed]);
+  }, [strings.avatarSaveFailed]);
 
   if (!hydrated) {
     return <ThemedView style={styles.root} />;
   }
 
-  const stepLabel = strings.onboardingStepLabel.replace('{{current}}', '2').replace('{{total}}', '3');
+  const stepLabel = strings.onboardingStepLabel.replace('{{current}}', '2').replace('{{total}}', '2');
 
   return (
     <ThemedView style={styles.root}>
@@ -142,48 +122,34 @@ export default function AvatarCustomizationScreen() {
               </ThemedText>
             </View>
             <ThemedText type="title" style={styles.title}>
-              {strings.avatarCustomizeTitle}
+              {strings.avatarSelectTitle}
             </ThemedText>
             <ThemedText type="body" themeColor="textSecondary" style={styles.subtitle}>
-              {strings.avatarCustomizeSubtitle}
+              {strings.avatarSelectSubtitle}
+            </ThemedText>
+            <ThemedText type="caption" themeColor="accentPurple" style={styles.singleHint}>
+              {strings.avatarSelectSingleAvailable}
             </ThemedText>
           </View>
 
           <GestureDetector gesture={previewPan}>
             <View style={[styles.previewWrap, { height: previewHeight }]}>
-              <AvatarPreviewScene customization={customization} spinYRef={spinYRef} />
+              {previewError ? (
+                <View style={styles.previewErrorBox}>
+                  <ThemedText type="caption" themeColor="accentPink">
+                    {previewError}
+                  </ThemedText>
+                </View>
+              ) : (
+                <Suspense fallback={<ChibiGlbPreviewFallback />}>
+                  <ChibiGlbPreviewScene spinYRef={spinYRef} onError={setPreviewError} />
+                </Suspense>
+              )}
             </View>
           </GestureDetector>
           <ThemedText type="caption" themeColor="textSecondary" style={styles.rotateHint}>
             {strings.avatarRotateHint}
           </ThemedText>
-
-          <View style={styles.controlsCard}>
-            <ColorSwatchRow
-              label={strings.avatarHairLabel}
-              options={HAIR_COLOR_OPTIONS}
-              selected={customization.hairColor}
-              resolveColor={resolveHairHex}
-              resolveLabel={(id) => strings.avatarColorLabels.hair[id]}
-              onSelect={(hairColor) => updateCustomization({ hairColor })}
-            />
-            <ColorSwatchRow
-              label={strings.avatarClothingLabel}
-              options={CLOTHING_COLOR_OPTIONS}
-              selected={customization.clothingColor}
-              resolveColor={resolveClothingHex}
-              resolveLabel={(id) => strings.avatarColorLabels.clothing[id]}
-              onSelect={(clothingColor) => updateCustomization({ clothingColor })}
-            />
-            <ColorSwatchRow
-              label={strings.avatarShoesLabel}
-              options={SHOES_COLOR_OPTIONS}
-              selected={customization.shoesColor}
-              resolveColor={resolveShoesHex}
-              resolveLabel={(id) => strings.avatarColorLabels.shoes[id]}
-              onSelect={(shoesColor) => updateCustomization({ shoesColor })}
-            />
-          </View>
 
           {formError ? (
             <ThemedText type="caption" themeColor="accentPink" style={styles.formError}>
@@ -192,13 +158,13 @@ export default function AvatarCustomizationScreen() {
           ) : null}
 
           <LobbixButton
-            label={strings.profileContinue}
-            onPress={handleContinue}
+            label={strings.avatarSelectConfirm}
+            variant="primary"
+            onPress={handleSelectAvatar}
             loading={loading}
             fullWidth
           />
         </ScrollView>
-        <DevMenuGear />
       </SafeAreaView>
     </ThemedView>
   );
@@ -226,19 +192,19 @@ const styles = StyleSheet.create({
   },
   title: { textAlign: 'center' },
   subtitle: { textAlign: 'center', paddingHorizontal: Spacing.sm },
+  singleHint: { textAlign: 'center', paddingHorizontal: Spacing.md },
   previewWrap: {
     width: '100%',
     borderRadius: Radius.lg,
     overflow: 'hidden',
   },
-  rotateHint: { textAlign: 'center' },
-  controlsCard: {
-    gap: Spacing.md,
-    borderWidth: 1,
-    borderColor: 'rgba(155, 93, 229, 0.28)',
-    backgroundColor: 'rgba(18, 24, 41, 0.88)',
-    borderRadius: Radius.lg,
+  previewErrorBox: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     padding: Spacing.md,
+    backgroundColor: palette.navy800,
   },
+  rotateHint: { textAlign: 'center' },
   formError: { textAlign: 'right' },
 });
